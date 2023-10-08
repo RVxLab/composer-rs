@@ -1,0 +1,33 @@
+{
+    "name": "composer-rs/simple",
+    "description": "A simple composer.json fixture",
+    "type": "project",
+    "require": {
+        "slim/slim": "^4.12",
+        "doctrine/orm": "^2.16",
+        "symfony/cache": "^6.3"
+    },
+    "require-dev": {
+        "pestphp/pest": "^2.21",
+        "nekofar/pest-plugin-slim": "^3.1",
+        "laravel/pint": "^1.13",
+        "nunomaduro/collision": "^7.9"
+    },
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

@@ -1,31 +1,36 @@
 use crate::php::php_array::PhpArray;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct LockFile {
     _readme: Vec<String>,
     #[serde(rename = "content-hash")]
     pub content_hash: String,
     pub packages: Vec<Package>,
-    pub aliases: Vec<String>, // Not entire sure what this type is yet
+    #[serde(rename = "packages-dev")]
+    pub packages_dev: Vec<Package>,
+    pub aliases: PhpArray<String>,
     #[serde(rename = "minimum-stability")]
     pub minimum_stability: String,
     #[serde(rename = "stability-flags")]
     #[serde(flatten)]
-    pub stability_flags: PhpArray,
+    pub stability_flags: PhpArray<u8>,
     #[serde(rename = "prefer-stable")]
     pub prefer_stable: bool,
     #[serde(rename = "prefer-lowest")]
     pub prefer_lowest: bool,
     #[serde(flatten)]
-    pub platform: PhpArray,
+    pub platform: PhpArray<String>,
     #[serde(rename = "platform-dev")]
     #[serde(flatten)]
-    pub platform_dev: PhpArray,
+    pub platform_dev: PhpArray<String>,
     #[serde(rename = "plugin-api-version")]
     pub plugin_api_version: String,
 }
@@ -82,6 +87,27 @@ pub struct Package {
     pub version: String,
     pub source: PackageSource,
     pub dist: PackageDist,
+    pub require: PhpArray<String>,
+    pub suggest: Option<HashMap<String, String>>,
+    pub conflict: Option<PhpArray<String>>,
+    #[serde(rename = "require-dev")]
+    pub require_dev: Option<PhpArray<String>>,
+    #[serde(rename = "type")]
+    pub package_type: String,
+    pub extra: Option<HashMap<String, Value>>,
+    pub autoload: Option<AutoloadConfig>,
+    #[serde(rename = "autoload-dev")]
+    pub autoload_dev: Option<AutoloadConfig>,
+    #[serde(rename = "notification-url")]
+    pub notification_url: String,
+    pub license: Vec<String>,
+    pub authors: Option<Vec<Author>>,
+    pub description: String,
+    pub homepage: Option<String>,
+    pub keywords: Option<Vec<String>>,
+    pub support: Option<HashMap<String, String>>,
+    pub funding: Option<Vec<Funding>>,
+    pub time: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -99,4 +125,48 @@ pub struct PackageDist {
     pub url: String,
     pub reference: String,
     pub shasum: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AutoloadPath {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AutoloadConfig {
+    pub files: Option<Vec<String>>,
+    pub classmap: Option<Vec<String>>,
+    #[serde(rename = "psr-0")]
+    pub psr0: Option<HashMap<String, AutoloadPath>>,
+    #[serde(rename = "psr-4")]
+    pub psr4: Option<HashMap<String, AutoloadPath>>,
+    #[serde(rename = "exclude-from-classmap")]
+    pub exclude_from_classmap: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Author {
+    pub name: String,
+    pub email: Option<String>,
+    pub homepage: Option<String>,
+    pub role: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Funding {
+    pub url: String,
+    #[serde(rename = "type")]
+    pub funding_type: String,
+}
+
+#[test]
+fn test_simple_lock_file() {
+    let lock_file: LockFile = File::open("./fixtures/simple.lock")
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    dbg!(lock_file);
 }

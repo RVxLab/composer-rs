@@ -1,4 +1,4 @@
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -85,6 +85,97 @@ pub enum Commands {
 }
 
 #[derive(Args, Debug)]
+#[clap(rename_all = "kebab-case")]
 pub struct RequireArgs {
-    pub packages: Vec<String>,
+    pub packages: Option<Vec<String>>,
+    /// Add requirement to require-dev.
+    #[arg(long, default_value_t = false)]
+    pub dev: bool,
+    /// Outputs the operations but will not execute anything (implicitly enables --verbose).
+    #[arg(long, default_value_t = false)]
+    pub dry_run: bool,
+    /// Forces installation from package sources when possible, including VCS information.
+    #[arg(long, default_value_t = false)]
+    pub prefer_source: bool,
+    /// Forces installation from package dist (default behavior).
+    #[arg(long, default_value_t = false)]
+    pub prefer_dist: bool,
+    /// Forces installation from package (auto chooses source for dev versions, dist for the rest).
+    #[arg(long, value_enum, default_value_t = PreferInstall::Dist)]
+    pub prefer_install: PreferInstall,
+    /// Write fixed version to the composer.json.
+    #[arg(long, default_value_t = false)]
+    pub fixed: bool,
+    /// Do not output download progress.
+    #[arg(long, default_value_t = false)]
+    pub no_progress: bool,
+    /// Disables the automatic update of the dependencies (implies --no-install).
+    #[arg(long, default_value_t = false)]
+    pub no_update: bool,
+    /// Skip the install step after updating the composer.lock file.
+    #[arg(long, default_value_t = false)]
+    pub no_install: bool,
+    /// Skip the audit step after updating the composer.lock file (can also be set via the COMPOSER_NO_AUDIT=1 env var).
+    #[arg(long, default_value_t = false)]
+    pub no_audit: bool,
+    /// Audit output format.
+    #[arg(long, value_enum, default_value_t = AuditFormat::Summary)]
+    pub audit_format: AuditFormat,
+    /// Run the dependency update with the --no-dev option.
+    #[arg(long, default_value_t = false)]
+    pub update_no_dev: bool,
+    /// Allows inherited dependencies to be updated, except those that are root requirements.
+    #[arg(long, short = 'w', default_value_t = false)]
+    pub update_with_dependencies: bool,
+    /// Allows all inherited dependencies to be updated, including those that are root requirements.
+    #[arg(long, short = 'W', default_value_t = false)]
+    pub update_with_all_dependencies: bool,
+    /// Alias for --update-with-dependencies
+    #[arg(long, default_value_t = false)]
+    pub with_dependencies: bool,
+    /// Alias for --update-with-all-dependencies
+    #[arg(long, default_value_t = false)]
+    pub with_all_dependencies: bool,
+    /// Ignore a specific platform requirement (php & ext- packages).
+    #[arg(long, default_value_t = false)]
+    pub ignore_platform: bool,
+    /// Ignore all platform requirements (php & ext- packages).
+    #[arg(long, default_value_t = false)]
+    pub ignore_platform_reqs: bool,
+    /// Prefer stable versions of dependencies (can also be set via the COMPOSER_PREFER_STABLE=1 env var).
+    #[arg(long, default_value_t = false)]
+    pub prefer_stable: bool,
+    /// Prefer lowest versions of dependencies (can also be set via the COMPOSER_PREFER_LOWEST=1 env var).
+    #[arg(long)]
+    pub prefer_lowest: bool,
+    /// Sorts packages when adding/updating a new dependency
+    #[arg(long, default_value_t = false)]
+    pub sort_packages: bool,
+    /// Optimize autoloader during autoloader dump
+    #[arg(long, short = 'o', default_value_t = false)]
+    pub optimize_autoloader: bool,
+    /// Autoload classes from the classmap only. Implicitly enables `--optimize-autoloader`.
+    #[arg(long, short = 'a', default_value_t = false)]
+    pub classmap_authoritative: bool,
+    /// Use APCu to cache found/not-found classes.
+    #[arg(long, default_value_t = false)]
+    pub apcu_autoloader: bool,
+    /// Use a custom prefix for the APCu autoloader cache. Implicitly enables --apcu-autoloader
+    #[arg(long)]
+    pub apcu_autoloader_prefix: Option<String>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum PreferInstall {
+    Dist,
+    Source,
+    Auto,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum AuditFormat {
+    Table,
+    Plain,
+    Json,
+    Summary,
 }

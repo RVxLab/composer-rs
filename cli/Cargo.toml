@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = { version = "1.0.75", features = [] }
 clap = { version = "4.4.6", features = ["derive"] }
 composer = { path = "../composer" }

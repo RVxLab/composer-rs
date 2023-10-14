@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod handlers;
 
 use crate::app::commands::Commands;
 use clap::Parser;

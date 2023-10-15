@@ -1,4 +1,5 @@
 use clap::{Args, Subcommand, ValueEnum};
+use composer::config::PreferredInstallMethod;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -101,8 +102,8 @@ pub struct RequireArgs {
     #[arg(long, default_value_t = false)]
     pub prefer_dist: bool,
     /// Forces installation from package (auto chooses source for dev versions, dist for the rest).
-    #[arg(long, value_enum, default_value_t = PreferInstall::Dist)]
-    pub prefer_install: PreferInstall,
+    #[arg(long, value_enum, default_value_t = PreferredInstallMethod::Dist)]
+    pub prefer_install: PreferredInstallMethod,
     /// Write fixed version to the composer.json.
     #[arg(long, default_value_t = false)]
     pub fixed: bool,
@@ -163,13 +164,6 @@ pub struct RequireArgs {
     /// Use a custom prefix for the APCu autoloader cache. Implicitly enables --apcu-autoloader
     #[arg(long)]
     pub apcu_autoloader_prefix: Option<String>,
-}
-
-#[derive(Debug, Clone, ValueEnum)]
-pub enum PreferInstall {
-    Dist,
-    Source,
-    Auto,
 }
 
 #[derive(Debug, Clone, ValueEnum)]

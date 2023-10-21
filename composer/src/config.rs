@@ -1,8 +1,10 @@
+use crate::dirs::{Directories, DirectoryError};
 use clap::ValueEnum;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use thiserror::Error;
+use std::io::Error;
+use std::path::Path;
 use std::time::Duration;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub struct Config {
@@ -64,23 +66,25 @@ pub struct Config {
 
 impl Config {
     pub fn build() -> Result<Self, ConfigError> {
-        let mut config = Config::default()?;
-
-        Ok(config)
+        Config::default()
     }
+
     fn default() -> Result<Self, ConfigError> {
         let cwd = std::env::current_dir()?;
         let vendor_dir = cwd.join("vendor");
 
         let (composer_json, composer_lock) = determine_composer_file_paths(&cwd);
 
-        let composer_home = composer_home()?;
+        let dirs = Directories::try_get_default_directories()?;
+        let cache_files_dir = dirs.cache_dir.join("files");
+        let cache_repo_dir = dirs.cache_dir.join("repo");
+        let cache_vcs_dir = dirs.cache_dir.join("vcs");
 
         Ok(Self {
             allow_plugins: PackageSetting::default(),
             allow_superuser: false,
             apcu_autoloader: false,
-            archive_dir: Box<Path>,
+            archive_dir: dirs.archive_dir,
             archive_format: "tar".into(),
             audit: AuditConfig {
                 ignore: None,
@@ -91,20 +95,20 @@ impl Config {
             bin_compat: BinaryCompatibility::default(),
             bin_dir: vendor_dir.join("bin").into_boxed_path(),
             bitbucket_oauth: None,
-            cache_dir: Box<Path>,
-            cache_files_dir: Box<Path>,
+            cache_dir: dirs.cache_dir,
+            cache_files_dir: cache_files_dir.into_boxed_path(),
             cache_files_maxsize: 300,
             cache_files_ttl: Duration::from_secs(15_552_000), // 6 months
             cache_read_only: false,
-            cache_repo_dir: Box<Path>,
-            cache_vcs_dir: Box<Path>,
+            cache_repo_dir: cache_repo_dir.into_boxed_path(),
+            cache_vcs_dir: cache_vcs_dir.into_boxed_path(),
             cafile: None,
             capath: None,
             classmap_authoritative: false,
-            composer_home: composer_home.into_boxed_path(),
+            composer_home: dirs.home_dir,
             composer_json,
             composer_lock,
-            data_dir: Box<Path>,
+            data_dir: dirs.data_dir,
             disable_tls: false,
             discard_changes: DiscardChanges::default(),
             github_domains: vec!["github.com".to_string()],
@@ -139,8 +143,25 @@ impl Config {
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Could not determine COMPOSER_HOME location")]
-    CannotDetermineComposerHome,
+    #[error("Could not determine config directory for {0}")]
+    CannotDetermineConfigDirectory(String),
+
+    #[error("Could not open file or directory {0}")]
+    IoError(std::io::Error),
+}
+
+impl From<std::io::Error> for ConfigError {
+    fn from(value: Error) -> Self {
+        ConfigError::IoError(value)
+    }
+}
+
+impl From<DirectoryError> for ConfigError {
+    fn from(value: DirectoryError) -> Self {
+        ConfigError::CannotDetermineConfigDirectory(match value {
+            DirectoryError::CannotDetermineDirectory(dir) => dir,
+        })
+    }
 }
 
 #[derive(Debug, Clone, ValueEnum, Default)]
@@ -239,7 +260,7 @@ pub enum PlatformCheck {
     None,
 }
 
-fn determine_composer_file_paths(cwd: &PathBuf) -> (Box<Path>, Box<Path>) {
+fn determine_composer_file_paths(cwd: &Path) -> (Box<Path>, Box<Path>) {
     let composer_json = std::env::var("COMPOSER").unwrap_or_else(|_| "composer.json".into());
     let composer_lock = composer_json.replace("json", "lock");
 
@@ -247,28 +268,4 @@ fn determine_composer_file_paths(cwd: &PathBuf) -> (Box<Path>, Box<Path>) {
         cwd.join(composer_json).into_boxed_path(),
         cwd.join(composer_lock).into_boxed_path(),
     )
-}
-
-fn composer_home() -> Result<PathBuf, ConfigError> {
-    if let Ok(home) = std::env::var("COMPOSER_HOME") {
-        return Ok(PathBuf::from(home));
-    }
-
-    if cfg!(windows) {
-        if let Ok(app_data) = std::env::var("APPDATA") {
-            return Ok(PathBuf::from(app_data))
-        }
-
-        return Err(ConfigError::CannotDetermineComposerHome);
-    }
-
-    if let Ok(xdg_config_home) = std::env::var("XDG_CONFIG_HOME") {
-        return Ok(PathBuf::from(xdg_config_home).join("composer"));
-    }
-
-    if let Ok(home) = std::env::var("HOME") {
-        return Ok(PathBuf::from(home).join(".composer"));
-    }
-
-    Err(ConfigError::CannotDetermineComposerHome)
 }
